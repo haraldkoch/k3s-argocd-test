@@ -1,0 +1,4 @@
+*.sops.*
+/.pre-commit-config.yaml
+/metal/manifests/calico/custom-resources.yaml
+/metal/manifests/calico/tigera-operator.yaml
