@@ -1,0 +1,59 @@
+---
+- name: Build a cluster with HA control plane
+  hosts: k3s_cluster
+  vars:
+    k3s_become_for_all: true
+    k3s_install_hard_links: true # required for system-upgrade-controller
+
+    k3s_release_version: v1.22
+
+#### Calico does not yet have ARM64 support
+#    # alternate CNI - use Calico for IPv6 support
+#    k3s_server_manifests_templates:
+#      - "manifests/calico/tigera-operator.yaml"
+#      - "manifests/calico/custom-resources.yaml"
+
+    k3s_server:
+      write-kubeconfig-mode: "0644"
+
+
+#### Calico does not yet have ARM64 support
+#      # disable k3s defaults so we can use Calico
+#      flannel-backend: "none" # This needs to be in quotes
+#      #cluster-cidr: 10.42.0.0/16,fdd5:aa8:9535:42::/108
+#      #service-cidr: 10.43.0.0/16,fdd5:aa8:9535:43::/108
+#      #kube-controller-manager-arg: node-cidr-mask-size-ipv6=112
+#      disable-network-policy: "true"
+
+      disable:
+        # we replace traefik with ingress-nginx for no reason
+        - traefik
+        # replaced with Metal-LB
+        - servicelb
+        # replaced with democratic-csi ZFS storage
+        - local-storage
+
+      node-taint:
+        # this is a single-node cluster so no taints
+        # - "node-role.kubernetes.io/control-plane:NoSchedule"
+        # this is still required for compatibility
+        # - "node-role.kubernetes.io/master:NoSchedule"
+
+
+    k3s_agent:
+
+  roles:
+    - role: xanmanning.k3s
+
+  tasks:
+    - name: Get Kubernetes config file
+      run_once: true
+      slurp:
+        src: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_base64
+
+    - name: Write Kubernetes config file with the correct cluster address
+      copy:
+        content: "{{ kubeconfig_base64.content | b64decode | replace('127.0.0.1', hostvars[groups['k3s_cluster'][0]].ansible_host) }}"
+        dest: "{{ playbook_dir }}/kubeconfig.yaml"
+      delegate_to: localhost

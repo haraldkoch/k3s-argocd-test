@@ -2,6 +2,7 @@
 ignore: |
   *.sops.*
   gotk-components.yaml
+  metal/manifests/**
 extends: default
 rules:
   truthy:

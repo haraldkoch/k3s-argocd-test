@@ -1,0 +1,29 @@
+- name: install pacman hook for kured support
+  hosts: all
+  become: true
+  tasks:
+    - name: make sure hooks folder exists
+      file:
+        dest: /etc/pacman.d/hooks
+        owner: root
+        group: root
+        mode: 0755
+        state: directory
+
+    - name: copy the pacman hook file
+      copy:
+        dest: /etc/pacman.d/hooks/linux.hook
+        owner: root
+        group: root
+        mode: 0644
+        content: |
+          [Trigger]
+          Operation = Install
+          Operation = Upgrade
+          Type = Package
+          Target = linux
+
+          [Action]
+          Description = Signal a reboot to Kured (the KUbernetes REboot Daemon)
+          When = PostTransaction
+          Exec = /bin/touch /var/run/reboot-required
